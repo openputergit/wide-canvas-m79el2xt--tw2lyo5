@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Fee Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Fee Management System</h1>
+            <div class="space-x-4">
+                <button onclick="showSection('dashboard')" class="hover:text-blue-200">Dashboard</button>
+                <button onclick="showSection('addStudent')" class="hover:text-blue-200">Add Student</button>
+                <button onclick="showSection('addInstitute')" class="hover:text-blue-200">Manage Institutes</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 right-4 hidden bg-green-500 text-white p-4 rounded shadow-lg z-50"></div>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard" class="container mx-auto p-4">
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">Student Records</h2>
+            <div class="flex flex-wrap gap-4 mb-4">
+                <input type="text" id="searchInput" placeholder="Search students..." class="p-2 border rounded">
+                <select id="instituteFilter" class="p-2 border rounded">
+                    <option value="">All Institutes</option>
+                </select>
+                <select id="stdFilter" class="p-2 border rounded">
+                    <option value="">All Standards</option>
+                </select>
+                <select id="yearFilter" class="p-2 border rounded">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full table-auto">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="p-2">GR No</th>
+                            <th class="p-2">Name</th>
+                            <th class="p-2">Institute</th>
+                            <th class="p-2">STD</th>
+                            <th class="p-2">Div</th>
+                            <th class="p-2">Due Amount</th>
+                            <th class="p-2">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Add Student Section -->
+    <section id="addStudent" class="container mx-auto p-4 hidden">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">Add New Student</h2>
+            <form id="studentForm" class="space-y-4" onsubmit="addStudent(event)">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" placeholder="GR Number" required class="p-2 border rounded">
+                    <input type="text" placeholder="Name" required class="p-2 border rounded">
+                    <input type="number" placeholder="Roll No" required class="p-2 border rounded">
+                    <input type="text" placeholder="STD" required class="p-2 border rounded">
+                    <input type="text" placeholder="Division" required class="p-2 border rounded">
+                    <select id="instituteSelect" required class="p-2 border rounded">
+                        <option value="">Select Institute</option>
+                    </select>
+                </div>
+                <div id="feeYearsSection" class="mt-4">
+                    <h3 class="font-bold mb-2">Select Fee Due Years</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Student</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Add Institute Section -->
+    <section id="addInstitute" class="container mx-auto p-4 hidden">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">Manage Institutes</h2>
+            <form id="instituteForm" class="space-y-4" onsubmit="addInstitute(event)">
+                <input type="text" placeholder="Institute Name" required class="p-2 border rounded w-full">
+                <div id="installmentSection" class="space-y-4">
+                    <h3 class="font-bold mb-2">Set Installments for Past 5 Years</h3>
+                    <!-- Installment fields for each year -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${Array.from({length: 5}, (_, i) => `<div>
+                            <label>${2024 - i - 1}-${(2024 - i).toString().slice(2)}:</label>
+                            <input type="number" placeholder="Installment Amount" class="p-2 border rounded">
+                        </div>`).join('')}
+                    </div>
+                </div>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Institute</button>
+            </form>
+            <div class="mt-8">
+                <h3 class="text-xl font-bold mb-4">Existing Institutes</h3>
+                <div id="instituteList" class="space-y-2">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Student Statement Modal -->
+    <div id="statementModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-11/12 md:w-3/4 max-h-90vh overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Account Statement</h2>
+                <button onclick="closeStatementModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div id="statementContent" class="overflow-x-auto">
+                <!-- Statement content will be inserted here -->
+            </div>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button onclick="exportStatementPDF()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                    Export PDF
+                </button>
+                <button onclick="closeStatementModal()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let userId = localStorage.getItem('userId') || 'user_' + Date.now();
+        localStorage.setItem('userId', userId);
+        const appSlug = 'fee-management-system';
+
+        const currentYear = 2024;
+        const academicYears = Array.from({length: 5}, (_, i) => `${currentYear - i - 1}-${(currentYear - i).toString().slice(2)}`);
+        let institutes = [];
+        let students = [];
+
+        async function init() {
+            await loadInstitutes();
+            await loadStudents();
+            populateFilters();
+            populateFeeYears();
+            showSection('dashboard');
+        }
+
+        async function addStudent(event) {
+            event.preventDefault();
+            // Collect student data and save to DB
+            showToast("Student added successfully!");
+            loadStudents();
+            showSection('dashboard');
+        }
+
+        async function addInstitute(event) {
+            event.preventDefault();
+            // Add institute logic
+            showToast("Institute added successfully!");
+            loadInstitutes();
+            showSection('addInstitute');
+        }
+
+        async function loadInstitutes() {
+            // Load institutes from DB
+            updateInstituteUI();
+        }
+
+        function updateInstituteUI() {
+            const instituteSelect = document.getElementById('instituteSelect');
+            // Clear and repopulate institute select
+            const instituteList = document.getElementById('instituteList');
+            // Update institute list
+        }
+
+        async function loadStudents() {
+            // Load students from DB
+            updateStudentTable();
+        }
+
+        function updateStudentTable() {
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = students.map(student => `
+                <tr class="border-b">
+                    <td class="p-2">${student.data.gr}</td>
+                    <td class="p-2">${student.data.name}</td>
+                    <td class="p-2">${getInstituteName(student.data.instituteId)}</td>
+                    <td class="p-2">${student.data.std}</td>
+                    <td class="p-2">${student.data.division}</td>
+                    <td class="p-2">₹${calculateDueAmount(student)}</td>
+                    <td class="p-2">
+                        <button onclick="showStatement('${student.id}')" class="text-blue-600 hover:text-blue-800 mr-2">
+                            <i class="bi bi-file-text"></i>
+                        </button>
+                        <button onclick="recordPayment('${student.id}')" class="text-green-600 hover:text-green-800">
+                            <i class="bi bi-cash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showStatement(id) {
+            // Show statement for selected student
+        }
+
+        function recordPayment(id) {
+            // Record payment logic and reload
+            showToast("Payment recorded successfully!");
+            loadStudents();
+            showSection('dashboard');
+        }
+
+        function getInstituteName(id) {
+            const institute = institutes.find(i => i.id === id);
+            return institute ? institute.data.name : 'Unknown';
+        }
+
+        function calculateDueAmount(student) {
+            return 0; // Placeholder
+        }
+
+        function showLoading() {
+            document.getElementById('loadingSpinner').classList.remove('hidden');
+            document.getElementById('loadingSpinner').classList.add('flex');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSpinner').classList.add('hidden');
+            document.getElementById('loadingSpinner').classList.remove('flex');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('section').forEach(section => section.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
+
+        init();
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
